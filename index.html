@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apuração e Projeção 2026</title>
+<meta name="description" content="Apuração parcial do TSE e projeção estatística não oficial do 2º turno presidencial de 2026.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1 id="titulo">Eleição presidencial 2026</h1>
+  <p class="aviso"><strong>Estimativa não oficial.</strong> A projeção é um cálculo estatístico independente,
+    sem vínculo com o TSE. O resultado oficial é apenas o divulgado pelo TSE.</p>
+  <p id="status" class="status">Carregando…</p>
+</header>
+
+<main>
+  <section class="cards">
+    <article class="card">
+      <h2>Apuração do TSE <span class="tag">parcial</span></h2>
+      <p class="sub" id="sub-bruto"></p>
+      <div id="bruto"></div>
+    </article>
+    <article class="card proj">
+      <h2>Projeção do resultado final <span class="tag tag-est">estimativa</span></h2>
+      <p class="sub" id="sub-proj"></p>
+      <div id="proj"></div>
+    </article>
+  </section>
+
+  <section class="card">
+    <h2>Como a noite evoluiu</h2>
+    <p class="sub">Linha cheia: projeção (faixa = intervalo de 90%). Linha tracejada: apuração parcial do TSE.</p>
+    <div id="legenda" class="legenda"></div>
+    <div id="grafico" class="grafico"></div>
+    <details>
+      <summary>Ver dados do gráfico</summary>
+      <div class="tabela-wrap"><table id="tab-hist"></table></div>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>Por estado</h2>
+    <p class="sub">“Atual” = votos válidos já apurados; “Proj.” = projeção para o final, com intervalo de 90%.
+      Em negrito: estados onde a projeção aponta um líder diferente do que lidera a apuração agora.</p>
+    <div class="tabela-wrap"><table id="tab-uf"></table></div>
+  </section>
+
+  <section class="card nota">
+    <h2>Sobre a projeção</h2>
+    <p>Para cada município, somamos os votos já apurados aos votos esperados nas seções que faltam.
+      Os votos que faltam são divididos conforme uma base histórica (1º turno de 2026 e 2º turno de 2022)
+      corrigida pela variação já observada nos municípios apurados, separando por porte do município e por estado,
+      e cada vez mais pelo próprio resultado parcial do município. A incerteza vem de 10.000 simulações.</p>
+    <p>Totais calculados a partir dos arquivos por estado e por município de
+      <a href="https://resultados.tse.jus.br/">resultados.tse.jus.br</a>, lidos no máximo uma vez por minuto.
+      <span id="nota-nacional"></span></p>
+    <p>No teste com a apuração do 1º turno (4/out), refeita na ordem real, o erro da projeção foi de cerca de
+      1,8 ponto com 5% das seções, 0,7 com 20% e menos de 0,2 a partir de 40%. Erros maiores são possíveis.</p>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
