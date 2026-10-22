@@ -17,7 +17,16 @@ const $ = (id) => document.getElementById(id);
 const pct = (x, d = 2) => (100 * x).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d }) + "%";
 const int = (x) => Math.round(x).toLocaleString("pt-BR");
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const color = (i) => `var(--series-${(i % 8) + 1})`;
+// Colour follows the candidate, never cycled: slots go to candidates ranked
+// by the first reading of the night (fixed afterwards); past 8 -> neutral.
+let slot = [];
+const color = (i) => (slot[i] < 8 ? `var(--series-${slot[i] + 1})` : "var(--text-muted)");
+function assignSlots(K) {
+  const first = (hist.pontos || []).find((p) => p.proj && p.proj.length === K);
+  const ref = first ? first.proj : latest.projecao.candidatos.map((c) => c.fatia_projetada);
+  const order = ref.map((v, i) => i).sort((a, b) => ref[b] - ref[a]);
+  slot = []; order.forEach((i, r) => { slot[i] = r; });
+}
 function parseBR(s) {           // "25/10/2026 19:42:10" -> Date
   const m = /(\d+)\/(\d+)\/(\d+) (\d+):(\d+):?(\d*)/.exec(s || "");
   return m ? new Date(+m[3], m[2] - 1, +m[1], +m[4], +m[5], +(m[6] || 0)) : null;
@@ -44,6 +53,7 @@ async function load() {
 function render() {
   const L = latest, P = L.projecao, Bt = L.bruto;
   const cands = L.candidatos.map((c, i) => ({ ...c, i, ...P.candidatos[i] }));
+  assignSlots(cands.length);
   const byProj = [...cands].sort((a, b) => b.fatia_projetada - a.fatia_projetada);
   const byRaw = [...cands].sort((a, b) => (Bt.votos[b.numero] || 0) - (Bt.votos[a.numero] || 0));
   const turno2 = String(L.turno) === "2" || cands.length === 2;   // two-way race
@@ -71,10 +81,10 @@ function render() {
   // Projection card.
   $("sub-proj").textContent = Bt.secoes_totalizadas === 0
     ? "Sem votos apurados: por enquanto é só a base histórica (1º turno 2026 + 2º turno 2022)."
-    : `Votos válidos projetados: ${int(P.validos_projetados)} · intervalo de 90%`;
+    : `Votos válidos projetados: ${int(P.validos_projetados)}`;
   $("proj").innerHTML = candList(byProj, (c) => ({
     big: pct(c.fatia_projetada, 1),
-    det: `entre ${pct(c.p05, 1)} e ${pct(c.p95, 1)}`,
+    det: `faixa provável: ${pct(c.p05, 1)} a ${pct(c.p95, 1)}`,
     bar: c.fatia_projetada, lo: c.p05, hi: c.p95,
     prob: turno2 ? `Chance de vitória: <strong>${probTxt(c.prob_vitoria)}</strong>`
       : `Chance de terminar em 1º: <strong>${probTxt(c.prob_vitoria)}</strong> · de passar de 50%: <strong>${probTxt(c.prob_maioria)}</strong>`,
@@ -109,7 +119,10 @@ function candList(list, f, half) {
 
 // ---- Chart: share over time; projection line + 90% band, raw count dashed ----
 function renderChart(cands, series) {
-  const pts = (hist.pontos || []).map((p) => ({ ...p, d: parseBR(p.t) })).filter((p) => p.d);
+  // Ignore points written with a different candidate list (would show NaN).
+  const K = cands.length;
+  const pts = (hist.pontos || []).map((p) => ({ ...p, d: parseBR(p.t) }))
+    .filter((p) => p.d && [p.bruto, p.proj, p.p05, p.p95].every((a) => a && a.length === K));
   const el = $("grafico");
   $("legenda").innerHTML = series.map((c) => `<span><i class="dot" style="background:${color(c.i)}"></i>${esc(c.nome)}</span>`).join("") +
     `<span>— projeção</span><span>- - - apuração</span>`;
@@ -178,7 +191,7 @@ function renderChart(cands, series) {
 }
 
 function renderHistTable(pts, series) {
-  const head = `<tr><th>Hora</th><th>Seções</th>${series.map((c) => `<th>${esc(c.nome)} apur.</th><th>proj. (IC 90%)</th>`).join("")}</tr>`;
+  const head = `<tr><th>Hora</th><th>Seções</th>${series.map((c) => `<th>${esc(c.nome)} apur.</th><th>proj. (faixa provável)</th>`).join("")}</tr>`;
   const rows = [...pts].reverse().map((p) => `<tr><td>${hhmm(p.d)}</td><td>${pct(p.pct, 1)}</td>` +
     series.map((c) => `<td>${pct(p.bruto[c.i], 1)}</td><td>${pct(p.proj[c.i], 1)} <span class="ic">${pct(p.p05[c.i], 1)}–${pct(p.p95[c.i], 1)}</span></td>`).join("") + "</tr>").join("");
   $("tab-hist").innerHTML = head + rows;
