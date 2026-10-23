@@ -17,15 +17,21 @@ const $ = (id) => document.getElementById(id);
 const pct = (x, d = 2) => (100 * x).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d }) + "%";
 const int = (x) => Math.round(x).toLocaleString("pt-BR");
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-// Colour follows the candidate, never cycled: slots go to candidates ranked
-// by the first reading of the night (fixed afterwards); past 8 -> neutral.
+// Colour follows the candidate, never cycled. Flávio (22) is always blue and
+// Lula (13) always red; the others take the remaining slots by the first
+// reading of the night (fixed afterwards); past the 8 slots -> neutral.
+const FIXO = { "22": 0, "13": 7 };   // número -> slot (--series-1 azul, --series-8 vermelho)
 let slot = [];
 const color = (i) => (slot[i] < 8 ? `var(--series-${slot[i] + 1})` : "var(--text-muted)");
-function assignSlots(K) {
+function assignSlots(cands) {
+  const K = cands.length;
   const first = (hist.pontos || []).find((p) => p.proj && p.proj.length === K);
-  const ref = first ? first.proj : latest.projecao.candidatos.map((c) => c.fatia_projetada);
-  const order = ref.map((v, i) => i).sort((a, b) => ref[b] - ref[a]);
-  slot = []; order.forEach((i, r) => { slot[i] = r; });
+  const ref = first ? first.proj : cands.map((c) => c.fatia_projetada);
+  const livres = [0, 1, 2, 3, 4, 5, 6, 7].filter((k) => !Object.values(FIXO).includes(k));
+  slot = [];
+  cands.forEach((c, i) => { if (c.numero in FIXO) slot[i] = FIXO[c.numero]; });
+  ref.map((v, i) => i).filter((i) => slot[i] == null).sort((a, b) => ref[b] - ref[a])
+    .forEach((i, r) => { slot[i] = r < livres.length ? livres[r] : 99; });
 }
 function parseBR(s) {           // "25/10/2026 19:42:10" -> Date
   const m = /(\d+)\/(\d+)\/(\d+) (\d+):(\d+):?(\d*)/.exec(s || "");
@@ -53,7 +59,7 @@ async function load() {
 function render() {
   const L = latest, P = L.projecao, Bt = L.bruto;
   const cands = L.candidatos.map((c, i) => ({ ...c, i, ...P.candidatos[i] }));
-  assignSlots(cands.length);
+  assignSlots(cands);
   const byProj = [...cands].sort((a, b) => b.fatia_projetada - a.fatia_projetada);
   const byRaw = [...cands].sort((a, b) => (Bt.votos[b.numero] || 0) - (Bt.votos[a.numero] || 0));
   const turno2 = String(L.turno) === "2" || cands.length === 2;   // two-way race
@@ -212,6 +218,23 @@ function renderStates(cands, cols) {
   }).join("");
   $("tab-uf").innerHTML = head + rows;
 }
+
+// Tema: automático (segue o aparelho) -> claro -> escuro.
+const TEMAS = ["auto", "claro", "escuro"];
+function aplicarTema(t) {
+  if (t === "claro") document.documentElement.dataset.theme = "light";
+  else if (t === "escuro") document.documentElement.dataset.theme = "dark";
+  else delete document.documentElement.dataset.theme;
+  $("tema").textContent = "Tema: " + t;
+  try { localStorage.setItem("tema", t); } catch (e) { /* sem armazenamento: só nesta visita */ }
+}
+let tema = "auto";
+try { tema = localStorage.getItem("tema") || "auto"; } catch (e) { /* idem */ }
+aplicarTema(TEMAS.includes(tema) ? tema : "auto");
+$("tema").addEventListener("click", () => {
+  tema = TEMAS[(TEMAS.indexOf(tema) + 1) % TEMAS.length];
+  aplicarTema(tema);
+});
 
 load();
 setInterval(load, POLL_MS);

@@ -70,6 +70,13 @@ body {
 header, main { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
 header { padding-top: 20px; }
 h1 { font-size: 1.5rem; margin: 0 0 8px; line-height: 1.2; }
+.topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.tema {
+  flex: none; font: inherit; font-size: .85rem; color: var(--text-secondary);
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 10px; cursor: pointer;
+}
+.tema:hover { color: var(--text-primary); }
 h2 { font-size: 1.05rem; margin: 0 0 4px; }
 .aviso {
   background: var(--warn-bg); border-left: 4px solid var(--warn-border);
