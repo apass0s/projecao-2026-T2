@@ -137,24 +137,21 @@ function renderChart(cands, series) {
   const W = Math.max(320, el.clientWidth), H = W < 500 ? 260 : 320;
   const m = { l: 44, r: 12, t: 10, b: 28 };
   const x0 = pts[0].d, x1 = pts[pts.length - 1].d;
-  let lo = 1, hi = 0;
-  for (const p of pts) for (const c of series) {
-    lo = Math.min(lo, p.p05[c.i], p.bruto[c.i] || p.p05[c.i]);
-    hi = Math.max(hi, p.p95[c.i], p.bruto[c.i]);
-  }
-  const pad = (hi - lo) * 0.08 + 0.005; lo = Math.max(0, lo - pad); hi = Math.min(1, hi + pad);
+  // Fixed 40-60% window: the projections sit close together near 50%. Lines
+  // that leave it (early raw counts) are clipped at the edge.
+  const lo = 0.4, hi = 0.6;
   const X = (d) => m.l + (W - m.l - m.r) * ((d - x0) / Math.max(1, x1 - x0));
   const Y = (v) => m.t + (H - m.t - m.b) * (1 - (v - lo) / (hi - lo));
   const path = (acc) => pts.map((p, j) => `${j ? "L" : "M"}${X(p.d).toFixed(1)},${Y(acc(p)).toFixed(1)}`).join("");
 
-  // Y gridlines at "nice" steps.
-  const span = hi - lo, step = [0.005, 0.01, 0.02, 0.05, 0.1, 0.2].find((s) => span / s <= 6) || 0.25;
+  // Y gridlines every 5 points.
   let g = "";
-  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) {
+  for (let k = 0; k <= 4; k++) {
+    const v = lo + 0.05 * k;
     g += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/>` +
-      `<text x="${m.l - 6}" y="${Y(v) + 4}" text-anchor="end">${pct(v, step < 0.01 ? 1 : 0)}</text>`;
+      `<text x="${m.l - 6}" y="${Y(v) + 4}" text-anchor="end">${pct(v, 0)}</text>`;
   }
-  if (lo < 0.5 && hi > 0.5) g += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(0.5)}" y2="${Y(0.5)}" stroke="var(--text-muted)" stroke-dasharray="2 3"/>`;
+  g += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(0.5)}" y2="${Y(0.5)}" stroke="var(--text-muted)" stroke-dasharray="2 3"/>`;
   const nt = W < 500 ? 4 : 7;
   for (let k = 0; k <= nt; k++) {
     const d = new Date(+x0 + (x1 - x0) * k / nt);
@@ -170,7 +167,8 @@ function renderChart(cands, series) {
     const last = pts[pts.length - 1];
     s += `<circle cx="${X(last.d)}" cy="${Y(last.proj[c.i])}" r="4" fill="${color(c.i)}" stroke="var(--surface-1)" stroke-width="2"/>`;
   }
-  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolução da apuração e da projeção">${g}${s}
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolução da apuração e da projeção">${g}
+    <clipPath id="area"><rect x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}"/></clipPath><g clip-path="url(#area)">${s}</g>
     <line id="cross" y1="${m.t}" y2="${H - m.b}" stroke="var(--text-muted)" visibility="hidden"/>
     <rect x="${m.l}" y="0" width="${W - m.l - m.r}" height="${H}" fill="transparent" id="hit"/></svg><div class="tip" id="tip"></div>`;
 
